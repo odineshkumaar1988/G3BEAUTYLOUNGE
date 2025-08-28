@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Invoice Generator - G3 BEAUTY LOUNGE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#e67e22">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.7.0/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root {
+      --main-color: #3a3f51;
+      --accent: #e67e22;
+      --bg: #f6f8fa;
+      --input-bg: #fff;
+      --border: #ccc;
+      --table-header-bg: #e08119;
+      --table-header-color: #fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      color: var(--main-color);
+      line-height: 1.5;
+      -webkit-text-size-adjust: 100%;
+    }
+    .container {
+      max-width: 950px;
+      margin: 10px auto;
+      background: #fff;
+      box-shadow: 0 4px 24px rgba(0,0,0,.04);
+      border-radius: 10px;
+      padding: 15px;
+    }
+    h1, h2 {
+      text-align: center; margin-bottom: 14px; color: var(--accent);
+      font-size: 1.5rem;
+    }
+    label {font-weight:500; display: block; margin-bottom: 5px; font-size: 0.9rem;}
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 8px;
+      margin-bottom: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      font-size: 16px; /* Prevents zoom on iOS */
+      -webkit-appearance: none;
+    }
+    textarea.multiline-address {
+      height: 60px;
+      resize: vertical;
+      min-height: 60px;
+      font-family: inherit;
+    }
+    .flex-row {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    .half, .third { width: 100%; }
+    .section-title {
+      font-size: 1.1rem;
+      margin: 20px 0 10px 0;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .invoice-items {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+      font-size: 0.85rem;
+    }
+    .invoice-items th, .invoice-items td {
+      border: 1px solid var(--border);
+      padding: 8px 4px;
+      text-align: center;
+    }
+    .invoice-items th {background: #f2f2f2;}
+    .invoice-items .desc-cell {text-align: left;}
+    .invoice-items input {
+      margin: 0;
+      padding: 4px;
+      font-size: 0.8rem;
+    }
+    .total-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+    }
+    .total-table th, .total-table td {border: 1px solid var(--border);}
+    .total-table th {
+      background: var(--table-header-bg);
+      color: var(--table-header-color);
+      text-align: left;
+      padding: 8px;
+      font-weight: 700;
+    }
+    .total-table td {
+      background: #fbf6ed;
+      padding: 8px;
+      text-align: left;
+    }
+    .total-table tr:last-child td { font-weight: 700; }
+    .btn {
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin: 5px 5px 5px 0;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: .2s;
+      min-height: 44px; /* Touch-friendly */
+      width: calc(50% - 5px);
+      display: inline-block;
+      text-align: center;
+    }
+    .btn:hover { background-color: #cf7b10;}
+    .btn-secondary { background: var(--main-color);}
+    .btn-secondary:hover { background: #24263e;}
+    .smb {
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      width: calc(50% - 5px);
+    }
+    .item-btn {
+      padding: 6px 10px;
+      margin: 2px;
+      width: auto;
+      font-size: 0.8rem;
+    }
+    .actions {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .uppercase { text-transform: uppercase; }
+    .remove-history-btn {
+      background: #c4302b;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      padding: 6px 10px;
+      margin-left: 8px;
+      cursor: pointer;
+      min-height: 36px;
+    }
+    .remove-history-btn:hover { background: #a81d1a; }
+    #previewBox {
+      background: #f9fcfd;
+      border: 1.5px solid var(--border);
+      margin: 15px 0;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .invoice-preview {
+      max-width: 100%;
+      margin: 0 auto;
+      background: #fff;
+      padding: 15px;
+      font-size: 0.85rem;
+    }
+    .preview-company, .preview-client {margin-bottom: 15px;}
+    .preview-logo {
+      height: 40px;
+      max-width: 120px;
+      display: block;
+      margin: 10px 0;
+    }
+    .currency-sel {width: 100%;}
+    .invoice-history-list {
+      list-style: square;
+      padding-left: 20px;
+      font-size: 0.9rem;
+    }
+    .invoice-history-list li {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+    .print-note {
+      font-size: 0.8rem;
+      color: #666;
+      display: block;
+      margin-top: 5px;
+    }
+    .notes-terms-row {
+      display: flex;
+      flex-direction: column;
+      margin-top: 15px;
+      border-top: 1.5px solid #e0e0e0;
+      font-size: 0.9rem;
+      padding-top: 10px;
+      gap: 10px;
+    }
+    .notes-terms-row > div { margin: 0; padding: 0;}
+
+    /* Desktop styles */
+    @media (min-width: 768px) {
+      .container { padding: 28px 18px 58px 18px; margin: 24px auto; }
+      .flex-row { flex-direction: row; }
+      .half { flex: 1; }
+      .third { flex: 33.333%; }
+      .btn { width: auto; }
+      .smb { width: auto; }
+      .actions { text-align: right; }
+      h1, h2 { font-size: 1.8rem; }
+      .invoice-items { font-size: 1rem; }
+      .total-table { width: 300px; margin-left: auto; }
+      .notes-terms-row { flex-direction: row; gap: 24px; }
+    }
+
+    /* Large screens */
+    @media (min-width: 992px) {
+      .preview-company { display: flex; justify-content: space-between; align-items: center; }
+      .preview-logo { margin: 0; }
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #previewBox, #previewBox * { visibility: visible; }
+      #previewBox { margin: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1 class="uppercase">Invoice Generator</h1>
+  
+  <div class="section-title">Load Items Master CSV</div>
+  <input type="file" id="itemCsvInput" accept=".csv" />
+  <button type="button" class="btn smb" onclick="loadMasterCsv()">Load Master Items</button>
+  <span class="print-note" id="masterStatus"></span>
+  
+  <form id="invoiceForm" autocomplete="off">
+    <div class="section-title">Company / Sender Details</div>
+    <div class="flex-row">
+      <div class="half">
+        <label>Company Name</label>
+        <input required name="companyName" id="companyName" value="G3 Beauty Lounge" class="uppercase"/>
+        <label>Address</label>
+        <textarea required class="multiline-address" name="companyAddress" id="companyAddress">5/432, 2nd Cross, Sairam Nagar,
+Near Best Writing Institute,
+Medavakkam, Chennai 600100</textarea>
+        <label>Phone</label>
+        <input required name="companyPhone" id="companyPhone" value="PH:7904081684"/>
+        <label>Email</label>
+        <input required name="companyEmail" id="companyEmail" value="Email: g3beautylounge@gmail.com"/>
+      </div>
+      <div class="half">
+        <label>Logo Upload <span class="print-note">(Optional, .jpg/.png, ≤200KB)</span></label>
+        <input type="file" accept="image/*" id="logoUpload" style="padding:8px;" />
+        <img id="logoPreview" class="preview-logo" style="display:none;" alt="Logo Preview"/>
+      </div>
+    </div>
+    
+    <div class="section-title">Client / Recipient Details</div>
+    <div class="flex-row">
+      <div class="half">
+        <label>Client Name</label>
+        <input required name="clientName" id="clientName"/>
+        <label>Address</label>
+        <input required name="clientAddress" id="clientAddress"/>
+      </div>
+      <div class="half">
+        <label>Phone</label>
+        <input name="clientPhone" id="clientPhone"/>
+        <label>Email</label>
+        <input name="clientEmail" id="clientEmail"/>
+      </div>
+    </div>
+    
+    <div class="section-title">Invoice Information</div>
+    <div class="flex-row">
+      <div class="third">
+        <label>Invoice Number</label>
+        <input required id="invoiceNumber" name="invoiceNumber" />
+      </div>
+      <div class="third">
+        <label>Date</label>
+        <input type="date" required id="invoiceDate" />
+      </div>
+      <div class="third">
+        <label>Currency</label>
+        <select id="currency">
+          <option value="INR">INR ₹</option>
+          <option value="USD">USD $</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="section-title">Invoice Items</div>
+    <table class="invoice-items" id="itemsTable">
+      <thead>
+        <tr>
+          <th class="desc-cell">Item Description</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>Total</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+    <div>
+      <button type="button" class="btn smb" onclick="addItemRow()">Add Item</button>
+      <button type="button" class="btn smb" onclick="addAdhocItemRow()">Add Adhoc Item</button>
+    </div>
+    
+    <div class="section-title">Summary & Notes</div>
+    <div class="flex-row">
+      <div class="half">
+        <label>Notes</label>
+        <textarea id="notes">UPI and CASH accepted. Thank you for your business! Get Extra 5% for referrals</textarea>
+        <label>Terms & Conditions</label>
+        <textarea id="terms">All services are non-refundable.</textarea>
+      </div>
+      <div class="half">
+        <div><strong>Subtotal:</strong> <span id="subtotalDisplay">₹0.00</span></div>
+        <label>Tax Rate (%)</label>
+        <input type="number" min="0" step="0.01" id="taxRate" value="0"/>
+        <div>Tax: <span id="taxAmountDisplay">₹0.00</span></div>
+        
+        <label>Discount (%)</label>
+        <input type="number" min="0" max="99" step="0.01" id="discountRate" value="10"/>
+        <div>Discount: <span id="discountAmountDisplay">₹0.00</span></div>
+        
+        <div style="font-size:1.2rem; font-weight:700; color:var(--accent); margin-top:10px;">
+          <strong>Total:</strong> <span id="totalDisplay">₹0.00</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="actions">
+      <button type="button" class="btn btn-secondary" onclick="previewInvoice()">Preview</button>
+      <button type="button" class="btn" onclick="generatePDF()">Generate PDF</button>
+      <button type="button" class="btn" onclick="exportToJPEG()">Export JPEG</button>
+      <button type="button" class="btn btn-secondary" onclick="saveDraft()">Save Draft</button>
+      <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear</button>
+    </div>
+  </form>
+  
+  <div id="previewBox" style="display:none;">
+    <div class="invoice-preview" id="invoicePreview"></div>
+  </div>
+  
+  <div class="section-title">Invoice History</div>
+  <ul class="invoice-history-list" id="invoiceHistory"></ul>
+</div>
+
+<script>
+let masterItems = [];
+let logoDataURL = "";
+let currency = 'INR';
+const $ = id => document.getElementById(id);
+
+function csvToArray(text) {
+  const lines = text.trim().split('\n');
+  const header = lines[0].split(',');
+  return lines.slice(1).map(line => {
+    const values = line.split(',');
+    let obj = {};
+    header.forEach((h, i) => { obj[h.trim()] = values[i] ? values[i].trim() : ""; });
+    return obj;
+  });
+}
+
+function loadMasterCsv() {
+  const input = $("itemCsvInput");
+  if (!input.files[0]) return alert("Choose a CSV file first.");
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    masterItems = csvToArray(e.target.result);
+    $("masterStatus").textContent = "Master items loaded: " + masterItems.length;
+  };
+  reader.readAsText(input.files[0]);
+}
+
+function formatCurrency(val,cur, noDecimals) {
+  let num = parseFloat(val)||0;
+  if (noDecimals) {
+    num = Math.round(num);
+    return cur === "INR" ? "₹" + num.toLocaleString("en-IN") : "$" + num.toLocaleString("en-US");
+  }
+  return cur === "INR" ? "₹" + num.toLocaleString("en-IN",{minimumFractionDigits:2}) : "$" + num.toLocaleString("en-US",{minimumFractionDigits:2});
+}
+
+function nextInvoiceNumber() {
+  let seq = +localStorage.getItem('invoice_seq')||1;
+  localStorage.setItem('invoice_seq', seq+1);
+  return "INV-"+(String(seq).padStart(4,'0'));
+}
+
+function addItemRow(item={desc:"",qty:1,unit:0}) {
+  let tbody = $("itemsBody");
+  let tr = document.createElement("tr");
+  let descCell = document.createElement("td");
+  descCell.className = "desc-cell";
+  
+  if (masterItems.length > 0) {
+    let select = document.createElement("select");
+    select.innerHTML = masterItems.map(mi =>
+      `<option value="${mi["Description"]}">${mi["Description"]}</option>`
+    ).join("");
+    select.value = item.desc || masterItems[0]["Description"];
+    select.onchange = function() {
+      let selItem = masterItems.find(mi => mi["Description"] === this.value);
+      tr.cells[2].firstElementChild.value = selItem ? selItem["Unit Price"] : "";
+      updateTotals();
+    };
+    descCell.appendChild(select);
+  } else {
+    let input = document.createElement("input");
+    input.value = item.desc || "";
+    input.onchange = updateTotals;
+    descCell.appendChild(input);
+  }
+
+  let qtyCell = document.createElement("td");
+  let qtyInput = document.createElement("input");
+  qtyInput.type = "number"; qtyInput.min = "1"; qtyInput.value = item.qty || "1";
+  qtyInput.onchange = updateTotals;
+  qtyCell.appendChild(qtyInput);
+
+  let unitCell = document.createElement("td");
+  let unitInput = document.createElement("input");
+  unitInput.type = "number"; unitInput.min = "0"; unitInput.step = "0.01";
+  unitInput.value = item.unit || "0";
+  unitInput.onchange = updateTotals;
+  unitCell.appendChild(unitInput);
+
+  let totalCell = document.createElement("td");
+  totalCell.className = "row-total";
+
+  let actionCell = document.createElement("td");
+  let removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "btn item-btn";
+  removeBtn.textContent = "Remove";
+  removeBtn.onclick = function() { tr.remove(); updateTotals(); };
+  actionCell.appendChild(removeBtn);
+
+  tr.appendChild(descCell);
+  tr.appendChild(qtyCell);
+  tr.appendChild(unitCell);
+  tr.appendChild(totalCell);
+  tr.appendChild(actionCell);
+  tbody.appendChild(tr);
+  updateTotals();
+}
+
+function addAdhocItemRow() {
+  let tbody = $("itemsBody");
+  let tr = document.createElement("tr");
+  let descCell = document.createElement("td");
+  descCell.className = "desc-cell";
+  let input = document.createElement("input");
+  input.placeholder = "Enter custom item...";
+  input.onchange = updateTotals;
+  descCell.appendChild(input);
+
+  let qtyCell = document.createElement("td");
+  let qtyInput = document.createElement("input");
+  qtyInput.type = "number"; qtyInput.min = "1"; qtyInput.value = "1";
+  qtyInput.onchange = updateTotals;
+  qtyCell.appendChild(qtyInput);
+
+  let unitCell = document.createElement("td");
+  let unitInput = document.createElement("input");
+  unitInput.type = "number"; unitInput.min = "0"; unitInput.step = "0.01";
+  unitInput.value = "0";
+  unitInput.onchange = updateTotals;
+  unitCell.appendChild(unitInput);
+
+  let totalCell = document.createElement("td");
+  totalCell.className = "row-total";
+
+  let actionCell = document.createElement("td");
+  let removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "btn item-btn";
+  removeBtn.textContent = "Remove";
+  removeBtn.onclick = function() { tr.remove(); updateTotals(); };
+  actionCell.appendChild(removeBtn);
+
+  tr.appendChild(descCell);
+  tr.appendChild(qtyCell);
+  tr.appendChild(unitCell);
+  tr.appendChild(totalCell);
+  tr.appendChild(actionCell);
+  tbody.appendChild(tr);
+  updateTotals();
+}
+
+function updateTotals() {
+  let tbody = $("itemsBody"), subtotal=0;
+  [...tbody.rows].forEach(row=>{
+    let desc = row.cells[0].querySelector("input, select").value;
+    let qty = row.cells[1].firstElementChild.valueAsNumber || 0;
+    let unit = row.cells[2].firstElementChild.valueAsNumber || 0;
+    let total = qty*unit;
+    row.cells[3].textContent = formatCurrency(total, currency);
+    subtotal += total;
+  });
+  $("subtotalDisplay").textContent = formatCurrency(subtotal, currency);
+  
+  let taxRate = +$("taxRate").value||0, discountRate=+$("discountRate").value||0;
+  let taxAmount = subtotal * taxRate/100;
+  let discountAmount = (subtotal + taxAmount) * discountRate/100;
+  let _total = subtotal + taxAmount - discountAmount;
+  $("taxAmountDisplay").textContent = formatCurrency(taxAmount, currency);
+  $("discountAmountDisplay").textContent = formatCurrency(discountAmount, currency);
+  $("totalDisplay").textContent = formatCurrency(Math.round(_total), currency, true);
+}
+
+if ($("itemsBody").rows.length === 0) addItemRow();
+
+function setInvoiceDefaults() {
+  $("invoiceNumber").value = nextInvoiceNumber();
+  $("invoiceDate").valueAsDate = new Date();
+}
+setInvoiceDefaults();
+
+$("currency").addEventListener("change",function() {
+  currency = this.value; updateTotals();
+});
+
+["taxRate","discountRate"].forEach(id=> $(id).addEventListener("input",updateTotals));
+
+$("logoUpload").addEventListener("change", function(event){
+  let file = event.target.files[0];
+  if(!file) return;
+  if(!file.type.startsWith("image/")) {alert("Logo must be an image."); return; }
+  if(file.size > 204800) {alert("Logo must be below 200KB."); this.value=""; return;}
+  let reader = new FileReader();
+  reader.onload = function(e){
+    logoDataURL = e.target.result;
+    $("logoPreview").src = logoDataURL;
+    $("logoPreview").style.display = "block";
+  };
+  reader.readAsDataURL(file);
+});
+
+function formatDate(dateStr) {
+  if (!dateStr) return "";
+  let d = new Date(dateStr);
+  if (isNaN(d)) return "";
+  let dd = String(d.getDate()).padStart(2, '0');
+  let mmm = d.toLocaleString('en-US', { month: 'short' });
+  let yyyy = d.getFullYear();
+  return `${dd}-${mmm}-${yyyy}`;
+}
+
+function generateFilename(invoiceNumber, customerName, ext) {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const hh = String(now.getHours()).padStart(2, '0');
+  const min = String(now.getMinutes()).padStart(2, '0');
+  const ss = String(now.getSeconds()).padStart(2, '0');
+  const safeInvoice = (invoiceNumber||'invoice').replace(/[^a-zA-Z0-9]/g, '_');
+  const safeClient = (customerName||'customer').replace(/[^a-zA-Z0-9]/g, '_');
+  return `${safeInvoice}_${safeClient}_${yyyy}${mm}${dd}_${hh}${min}${ss}.${ext}`;
+}
+
+function exportToJPEG() {
+  const container = $("previewBox");
+  if (!container || container.style.display === "none") {
+    alert('Nothing to export! Please preview invoice first.'); return;
+  }
+  const invoiceNumber = $("invoiceNumber").value || "invoice";
+  const customerName = $("clientName").value || "customer";
+  const fileName = generateFilename(invoiceNumber, customerName, "jpg");
+
+  html2canvas(container, {scale: 2, useCORS: true}).then(canvas => {
+    canvas.toBlob(blob => {
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = URL.createObjectURL(blob);
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }, 'image/jpeg', 0.9);
+  });
+}
+
+function previewInvoice() {
+  let data = serializeForm();
+  $("previewBox").style.display = "block";
+  let cur = data.currency;
+  let itemsRows = data.items.map(
+    i=>`<tr>
+      <td>${i.desc}</td>
+      <td>${i.qty}</td>
+      <td>${formatCurrency(i.unit,cur)}</td>
+      <td>${formatCurrency(i.qty*i.unit,cur)}</td>
+    </tr>`
+  ).join("");
+  let subtotal = data.items.reduce((a,b)=>a+(parseFloat(b.qty)*parseFloat(b.unit)),0);
+  let taxAmt = subtotal * (parseFloat(data.taxRate)||0)/100;
+  let discountAmt = (subtotal+taxAmt) * (parseFloat(data.discountRate)||0)/100;
+  let total = subtotal+taxAmt-discountAmt;
+  
+  let summaryRows = `
+    <tr>
+      <th style="background:#e08119; color:#fff; text-align:left;">Total</th>
+      <th style="background:#e08119;color:#fff;text-align:left;">Value</th>
+    </tr>
+    <tr><td>Subtotal</td><td>${formatCurrency(subtotal,cur)}</td></tr>
+    <tr><td>Tax (${data.taxRate||0}%)</td><td>${formatCurrency(taxAmt,cur)}</td></tr>
+    <tr><td>Discount (${data.discountRate||0}%)</td><td>${formatCurrency(discountAmt,cur)}</td></tr>
+    <tr><td style="font-weight:700;">Total</td><td style="font-weight:700;">${formatCurrency(Math.round(total),cur,true)}</td></tr>
+  `;
+  
+  let html = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap;">
+      <div class="preview-company" style="flex:1; min-width:200px;">
+        <div class="uppercase" style="font-weight:700; font-size:1.2rem;">${data.company.name}</div>
+        <div style="white-space: pre-line;">${data.company.address}</div>
+        <div>${data.company.phone} | ${data.company.email}</div>
+      </div>
+      ${data.logo?'<img src="'+data.logo+'" class="preview-logo" style="flex-shrink:0;" />' : ""}
+    </div>
+    <div style="display:flex; justify-content:space-between; margin-top:14px; flex-wrap:wrap;">
+      <div class="preview-client" style="flex:1; min-width:200px;">
+        <strong>Billed To:</strong> <br>
+        ${data.client.name}<br>
+        ${data.client.address}<br>
+        ${data.client.phone ? data.client.phone+"<br>" : ""}
+        ${data.client.email ? data.client.email+"<br>" : ""}
+      </div>
+      <div style="text-align:right;">
+        <div><strong>Invoice #:</strong> ${data.invoiceNumber}</div>
+        <div><strong>Date:</strong> ${formatDate(data.date)}</div>
+        <div><strong>Currency:</strong> ${data.currency}</div>
+      </div>
+    </div>
+    <table class="invoice-items" style="margin:18px 0 7px 0;">
+      <tr><th>Item</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr>
+      ${itemsRows}
+    </table>
+    <table class="total-table" style="margin-left:auto;">
+      ${summaryRows}
+    </table>
+    <div class="notes-terms-row">
+      <div><strong>Notes:</strong> ${data.notes||""}</div>
+      <div><strong>Terms:</strong> ${data.terms||""}</div>
+    </div>
+  `;
+  $("invoicePreview").innerHTML = html;
+  
+  // Scroll to preview on mobile
+  if(window.innerWidth < 768) {
+    $("previewBox").scrollIntoView({behavior: 'smooth'});
+  }
+}
+
+function wrapText(str, maxLen) {
+  if (!str) return '';
+  let result = [];
+  let line = '';
+  let words = str.split(' ');
+  words.forEach(word=>{
+    if ((line + ' ' + word).trim().length > maxLen) {
+      if (line) result.push(line.trim());
+      line = word;
+    } else {
+      line += ' ' + word;
+    }
+  });
+  if (line) result.push(line.trim());
+  return result;
+}
+
+function generatePDF() {
+  let data = serializeForm();
+  let { jsPDF } = window.jspdf;
+  let doc = new jsPDF("p", "pt", "a4");
+  let pageW = doc.internal.pageSize.getWidth();
+  let margin = 30;
+  let y = margin + 8;
+  
+  if (data.logo) doc.addImage(data.logo, 'JPEG', margin, y - 5, 80, 30);
+  doc.setFontSize(18);
+  doc.text((data.company.name||"").toUpperCase(), data.logo ? margin+90 : margin, y+20);
+  doc.setFontSize(10);
+  
+  let addressLines = (data.company.address||"").split(/\r?\n/);
+  addressLines.forEach((line, idx) => {
+    doc.text(line, data.logo ? margin+90 : margin, y + 36 + idx * 14);
+  });
+  let addressHeight = addressLines.length * 14;
+  doc.text(`${data.company.phone} | ${data.company.email}`, data.logo ? margin+90 : margin, y + 36 + addressHeight + 10);
+  y += 62 + addressHeight + 10;
+  
+  doc.setFontSize(11); doc.setTextColor(60);
+  doc.text("Bill To:", margin, y); doc.setFont("helvetica","bold");
+  doc.text(data.client.name, margin+48, y);
+  doc.setFont("helvetica","normal");
+  
+  let clientAddressY = y + 14;
+  doc.text(data.client.address, margin+48, clientAddressY);
+  let nextY = clientAddressY;
+  if (data.client.phone) {
+    nextY += 14;
+    doc.text(data.client.phone, margin+48, nextY);
+  }
+  if (data.client.email) {
+    nextY += 14;
+    doc.text(data.client.email, margin+48, nextY);
+  }
+  
+  const formattedDate = formatDate(data.date);
+  doc.setTextColor(80);
+  doc.text(`Invoice #: ${data.invoiceNumber}`, pageW-180, y-50);
+  doc.text(`Date: ${formattedDate}`, pageW-180, y-36);
+  doc.text(`Currency: ${data.currency}`, pageW-180, y-22);
+  y = nextY + 36;
+  
+  let itemsTable = data.items.map(i => [
+    wrapText(i.desc, 48),
+    i.qty,
+    formatCurrency(i.unit, data.currency),
+    formatCurrency(i.qty*i.unit, data.currency)
+  ]);
+  
+  doc.autoTable({
+    startY: y, margin: {left: margin, right: margin},
+    head:[['Item Description','Qty','Unit Price','Total']],
+    body: itemsTable,
+    styles: {halign: 'center', valign: 'middle', fontSize:10},
+    headStyles: {fillColor: [224, 129, 25], textColor: [255,255,255]},
+    alternateRowStyles: {fillColor: [246, 248, 250]},
+    columnStyles: {0: {halign: 'left', cellWidth: 180}},
+    theme:'grid'
+  });
+  y = doc.lastAutoTable.finalY + 15;
+  
+  let subtotal = data.items.reduce((a,b)=>a+(parseFloat(b.qty)*parseFloat(b.unit)),0);
+  let taxAmt = subtotal * (parseFloat(data.taxRate)||0)/100;
+  let discountAmt = (subtotal+taxAmt) * (parseFloat(data.discountRate)||0)/100;
+  let total = subtotal+taxAmt-discountAmt;
+  
+  let summaryTable = [
+    ['Subtotal', formatCurrency(subtotal, data.currency)],
+    [`Tax (${data.taxRate||0}%)`, formatCurrency(taxAmt, data.currency)],
+    [`Discount (${data.discountRate||0}%)`, formatCurrency(discountAmt, data.currency)],
+    ['Total', formatCurrency(Math.round(total), data.currency, true)]
+  ];
+  
+  doc.autoTable({
+    startY: y,
+    margin: {left: pageW-300},
+    head: [['Total','Value']],
+    body: summaryTable,
+    styles: {fontSize:10, halign:'left'},
+    columnStyles: {0:{halign:'left', cellWidth: 100},1:{halign:'left', cellWidth: 90}},
+    theme: 'grid',
+    tableWidth:280,
+    headStyles: {fillColor:[224,129,25],textColor:[255,255,255]}
+  });
+  y = doc.lastAutoTable.finalY + 18;
+  
+  doc.setFontSize(10); doc.setTextColor(120);
+  doc.text("Notes: " + (data.notes||""), margin, y);
+  y += 14;
+  doc.text("Terms: " + (data.terms||""), margin, y);
+  
+  const fileName = generateFilename(data.invoiceNumber, data.client.name, "pdf");
+  doc.save(fileName, {returnPromise:true});
+  saveInvoiceToHistory(data);
+}
+
+function removeHistoryEntry(idx) {
+  let list = JSON.parse(localStorage.getItem("invoice_history")||"[]");
+  if (!confirm(`Remove invoice "${list[idx].invoiceNumber}"?`)) return;
+  list.splice(idx, 1);
+  localStorage.setItem("invoice_history", JSON.stringify(list));
+  loadHistory();
+}
+
+function loadHistory() {
+  let ul = $("invoiceHistory");
+  let list = JSON.parse(localStorage.getItem("invoice_history")||"[]");
+  let reversed = list.slice().reverse();
+  ul.innerHTML = reversed.length ? "" : "<li>No invoices.</li>";
+  reversed.forEach((inv, ix) => {
+    let origIdx = list.length - 1 - ix;
+    let li = document.createElement("li");
+    li.innerHTML =
+      `<div><b>${inv.invoiceNumber}</b> - ${inv.client.name}, ${inv.date || ''}</div>
+      <div style="margin-top:5px;">
+        <button type="button" class="btn smb btn-secondary" onclick="fillFormFromHistory(${origIdx})">Load</button>
+        <button type="button" class="remove-history-btn" onclick="removeHistoryEntry(${origIdx})">Remove</button>
+      </div>`;
+    ul.appendChild(li);
+  });
+}
+
+function serializeForm() {
+  let items=[...$("itemsBody").rows].map(row=> ({
+    desc: row.cells[0].querySelector("input,select").value,
+    qty: row.cells[1].firstElementChild.value,
+    unit: row.cells[2].firstElementChild.value
+  }));
+  return {
+    company: {
+      name: $("companyName").value, address: $("companyAddress").value,
+      phone: $("companyPhone").value, email: $("companyEmail").value
+    },
+    client: {
+      name: $("clientName").value, address: $("clientAddress").value,
+      phone: $("clientPhone").value, email: $("clientEmail").value
+    },
+    logo: logoDataURL,
+    invoiceNumber: $("invoiceNumber").value,
+    date: $("invoiceDate").value,
+    currency: $("currency").value,
+    items: items,
+    taxRate: $("taxRate").value, 
+    discountRate: $("discountRate").value,
+    notes: $("notes").value,
+    terms: $("terms").value
+  }
+}
+
+function fillFormFromHistory(idx) {
+  let list = JSON.parse(localStorage.getItem("invoice_history")||"[]");
+  let data = list[idx];
+  $("companyName").value = data.company.name;
+  $("companyAddress").value = data.company.address;
+  $("companyPhone").value = data.company.phone;
+  $("companyEmail").value = data.company.email;
+  $("clientName").value = data.client.name;
+  $("clientAddress").value = data.client.address;
+  $("clientPhone").value = data.client.phone;
+  $("clientEmail").value = data.client.email;
+  $("invoiceNumber").value = data.invoiceNumber;
+  $("invoiceDate").value = data.date;
+  $("currency").value = data.currency; currency = data.currency;
+  $("taxRate").value = data.taxRate;
+  $("discountRate").value = data.discountRate;
+  $("notes").value = data.notes || "";
+  $("terms").value = data.terms || "";
+  logoDataURL = data.logo || "";
+  $("logoPreview").src = logoDataURL || "";
+  $("logoPreview").style.display = logoDataURL ? "block" : "none";
+  $("itemsBody").innerHTML = "";
+  (data.items||[]).forEach(i=>addItemRow(i));
+  updateTotals();
+  previewInvoice();
+  window.scrollTo(0,0);
+}
+
+function saveInvoiceToHistory(data) {
+  let list = JSON.parse(localStorage.getItem("invoice_history")||"[]");
+  let idx = list.findIndex(i => i.invoiceNumber===data.invoiceNumber);
+  if(idx>-1) list[idx]=data; else list.push(data);
+  localStorage.setItem("invoice_history", JSON.stringify(list));
+  loadHistory();
+}
+
+function saveDraft() {
+  let data = serializeForm();
+  localStorage.setItem("invoice_draft", JSON.stringify(data));
+  alert("Invoice draft saved!");
+  loadHistory();
+}
+
+function clearForm() {
+  if (!confirm("Clear all invoice data?")) return;
+  $("companyName").value = "G3 Beauty Lounge";
+  $("companyAddress").value = "5/432, 2nd Cross, Sairam Nagar,\nNear Best Writing Institute,\nMedavakkam, Chennai 600100";
+  $("companyPhone").value = "PH:7904081684";
+  $("companyEmail").value = "Email: g3beautylounge@gmail.com";
+  $("clientName").value = "";
+  $("clientAddress").value = "";
+  $("clientPhone").value = "";
+  $("clientEmail").value = "";
+  setInvoiceDefaults();
+  $("currency").value = "INR"; currency="INR";
+  $("taxRate").value = 0;
+  $("discountRate").value = 10;
+  $("notes").value = "UPI and CASH accepted. Thank you for your business! Get Extra 5% for referrals";
+  $("terms").value = "All services are non-refundable.";
+  logoDataURL="";
+  $("logoPreview").src = ""; $("logoPreview").style.display="none";
+  $("itemsBody").innerHTML = ""; addItemRow();
+}
+
+function loadDraft() {
+  let d = JSON.parse(localStorage.getItem("invoice_draft")||"null");
+  if(d) {
+    fillFormFromHistory(0); // Assuming draft is treated similarly
+  }
+}
+
+$("invoiceForm").onsubmit = (e)=>e.preventDefault();
+$("itemsBody").addEventListener("input",updateTotals);
+loadHistory(); loadDraft();
+
+["companyName", "companyAddress", "companyPhone", "companyEmail", "clientName", "clientAddress", "clientPhone", "clientEmail", "invoiceNumber", "invoiceDate", "currency", "taxRate", "discountRate", "notes", "terms"].forEach(id => {
+  $(id).addEventListener("input", updateTotals);
+});
+
+$("invoiceDate").valueAsDate = new Date();
+</script>
+</body>
+</html>
